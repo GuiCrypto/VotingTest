@@ -10,17 +10,22 @@ contract("Voting", accounts => {
     const voterA = accounts[1];
     const voterB = accounts[3];
     const voterC = accounts[4];
+    console.log("owner", owner)
+    console.log("voterA", voterA)
+    console.log("voterB", voterB)
+    console.log("voterC", voterC)
 
     describe ("1st Step - RegisteringVoters", () => {
         before(async() => {
             VotingInstance = await Voting.new({from: owner});
             //VotingInstance = await Voting.deployed({from: owner});
-            console.log('LOG', VotingInstance);
+            // console.log('LOG', VotingInstance);
         })
 
         it("owner add voterA", async() => {
-            result = VotingInstance.addVoter(voterA, {from: owner})
-            await expectRevert(result, "Ownable: caller is not the owner");
+            result = await VotingInstance.addVoter(voterA, {from: owner})
+            console.log(result);
+            await expectEvent(result, 'VoterRegistered', {voterAddress: voterA});
         });
 
         it("only owner can add voter", async() => {
