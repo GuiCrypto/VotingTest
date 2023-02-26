@@ -90,8 +90,6 @@ contract("Voting", accounts => {
         context ("Deviant Usage", () => {
 
             // deviant only at this step
-
-
             it("Voter cannot add voter", async() => {
                 result = VotingInstance.addVoter(voterB, {from: voterA})
                 await expectRevert(result, "Ownable: caller is not the owner");
@@ -233,9 +231,12 @@ contract("Voting", accounts => {
         })
 
         context ("Check next level passing", () => {
-
             it("from RegisteringVoters to ProposalsRegistrationStarted", async() => {
-                await VotingInstance.startProposalsRegistering({from: owner})
+                result = await VotingInstance.startProposalsRegistering({from: owner})
+                expectEvent(result, 'WorkflowStatusChange', {previousStatus: BN(0) , newStatus: BN(1)})
+            });
+
+            it("test workflowStatus getter", async() => {
                 result = await VotingInstance.workflowStatus();
                 expect(result).to.be.bignumber.equal(new BN(1));
             });

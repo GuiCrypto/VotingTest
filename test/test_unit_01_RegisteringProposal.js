@@ -248,7 +248,11 @@ contract("Voting", accounts => {
 
         context ("Check next level passing", () => {
             it("from ProposalsRegistrationStarted to endProposalsRegistering", async() => {
-                await VotingInstance.endProposalsRegistering({from: owner})
+                result = await VotingInstance.endProposalsRegistering({from: owner})
+                expectEvent(result, 'WorkflowStatusChange', {previousStatus: BN(1) , newStatus: BN(2)})
+            });
+
+            it("test workflowStatus getter", async() => {
                 result = await VotingInstance.workflowStatus();
                 expect(result).to.be.bignumber.equal(new BN(2));
             });
