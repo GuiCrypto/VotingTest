@@ -17,14 +17,13 @@ contract("Voting", accounts => {
     console.log("voterC", voterC)
     console.log("other", other)
 
-    describe ("1nd Step - RegisteringProposal", () => {
+    describe ("2nd Step - RegisteringProposal", () => {
         before(async() => {
             VotingInstance = await Voting.new({from: owner});
             await VotingInstance.addVoter(voterA, {from: owner})
             await VotingInstance.addVoter(voterB, {from: owner})
             await VotingInstance.addVoter(voterC, {from: owner})
             await VotingInstance.startProposalsRegistering({from: owner})
-
         })
 
         context ("Regular Usage", () => {
@@ -33,6 +32,8 @@ contract("Voting", accounts => {
                 result = await VotingInstance.workflowStatus()
                 expect(result).to.be.bignumber.equal(new BN(1));
             });
+
+            // Do what is allowed at this step
 
             it("Voter A AddProposal 1", async() => {
                 result = await VotingInstance.addProposal("Proposition 1", {from: voterA})
@@ -47,6 +48,38 @@ contract("Voting", accounts => {
             it("Voter C AddProposal 3", async() => {
                 result = await VotingInstance.addProposal("Proposition 3", {from: voterC})
                 await expectEvent(result, 'ProposalRegistered', {proposalId: BN(3)});
+            });
+
+
+            // check initialized Getter
+
+            it("VoterA get voterB", async() => {
+                result = await VotingInstance.getVoter(voterB, {from: voterA})
+                expect(result.isRegistered).to.equal(true);
+                expect(result.hasVoted).to.equal(false);
+                expect(result.votedProposalId).to.be.bignumber.equal(BN(0));
+            });
+
+            it("VoterB get other", async() => {
+                result = await VotingInstance.getVoter(other, {from: voterB})
+                expect(result.isRegistered).to.equal(false);
+                expect(result.hasVoted).to.equal(false);
+                expect(result.votedProposalId).to.be.bignumber.equal(new BN(0));
+
+            });
+
+            it("VoterB get voterA", async() => {
+                result = await VotingInstance.getVoter(voterA, {from: voterB})
+                expect(result.isRegistered).to.equal(true);
+                expect(result.hasVoted).to.equal(false);
+                expect(result.votedProposalId).to.be.bignumber.equal(BN(0));
+            });            
+
+            it("VoterC get voterC", async() => {
+                result = await VotingInstance.getVoter(voterC, {from: voterC})
+                expect(result.isRegistered).to.equal(true);
+                expect(result.hasVoted).to.equal(false);
+                expect(result.votedProposalId).to.be.bignumber.equal(BN(0));
             });
 
             it("Voter A GetProposal 1", async() => {
@@ -82,10 +115,28 @@ contract("Voting", accounts => {
         })
 
         context ("Deviant Usage", () => {
+            
+            // deviant only at this step
+            it("VoterC propose an empty proposition", async() => {
+                result = VotingInstance.addProposal("", {from: voterC})
+                await expectRevert(result, "Vous ne pouvez pas ne rien proposer.");
+            });
 
-            it("Owner cannot add new voter", async() => {
-                result = VotingInstance.addVoter(other, {from: owner})
-                await expectRevert(result, "Voters registration is not open yet");
+            // deviant for other steps
+
+            it("Owner cannot add voter", async() => {
+                result = VotingInstance.addVoter(voterB, {from: owner})
+                await expectRevert(result, "Voters registration is not open yet.");
+            });
+
+            it("Voter cannot add voter", async() => {
+                result = VotingInstance.addVoter(voterB, {from: voterA})
+                await expectRevert(result, "Ownable: caller is not the owner");
+            });
+
+            it("Other cannot add voter", async() => {
+                result = VotingInstance.addVoter(voterB, {from: other})
+                await expectRevert(result, "Ownable: caller is not the owner");
             });
 
             it("Owner get Proposal", async() => {
@@ -96,6 +147,21 @@ contract("Voting", accounts => {
             it("Other get Proposal", async() => {
                 result = VotingInstance.getOneProposal(0, {from: other})
                 await expectRevert(result, "You're not a voter");
+            });
+
+            it("Owner vote for proposition 0", async() => {
+                result = VotingInstance.setVote(0, {from: owner})
+                await expectRevert(result, "You're not a voter.")
+            });
+
+            it("Other vote for proposition 0", async() => {
+                result = VotingInstance.setVote(0, {from: other})
+                await expectRevert(result, "You're not a voter.")
+            });
+
+            it("Voter vote for proposition 0", async() => {
+                result = VotingInstance.setVote(0, {from: voterA})
+                await expectRevert(result, "Voting session havent started yet.")
             });
 
             it("Other launch endProposalsRegistering", async() => {

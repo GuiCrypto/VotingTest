@@ -29,6 +29,8 @@ contract("Voting", accounts => {
                 expect(result).to.be.bignumber.equal(new BN(0));
             });
 
+            // Do what is allowed at this step
+
             it("owner add voterA", async() => {
                 result = await VotingInstance.addVoter(voterA, {from: owner})
                 await expectEvent(result, 'VoterRegistered', {voterAddress: voterA});
@@ -38,6 +40,14 @@ contract("Voting", accounts => {
                 result = await VotingInstance.addVoter(voterB, {from: owner})
                 await expectEvent(result, 'VoterRegistered', {voterAddress: voterB});
             });
+
+            it("owner add voterC", async() => {
+                result = await VotingInstance.addVoter(voterC, {from: owner})
+                await expectEvent(result, 'VoterRegistered', {voterAddress: voterC});
+            });
+
+
+            // check initialized Getter
 
             it("VoterA get voterB", async() => {
                 result = await VotingInstance.getVoter(voterB, {from: voterA})
@@ -54,6 +64,20 @@ contract("Voting", accounts => {
 
             });
 
+            it("VoterB get voterA", async() => {
+                result = await VotingInstance.getVoter(voterA, {from: voterB})
+                expect(result.isRegistered).to.equal(true);
+                expect(result.hasVoted).to.equal(false);
+                expect(result.votedProposalId).to.be.bignumber.equal(BN(0));
+            });            
+
+            it("VoterC get voterC", async() => {
+                result = await VotingInstance.getVoter(voterC, {from: voterC})
+                expect(result.isRegistered).to.equal(true);
+                expect(result.hasVoted).to.equal(false);
+                expect(result.votedProposalId).to.be.bignumber.equal(BN(0));
+            });
+
 
             it("Check ProposalID", async() => {
                 result = await VotingInstance.winningProposalID();
@@ -65,10 +89,8 @@ contract("Voting", accounts => {
 
         context ("Deviant Usage", () => {
 
-            // it("Check GENSIS Proposal", async() => {
-            //     result = VotingInstance.getOneProposal(0, {from: voterA})
-            //     await expectRevert(result, "Index out of range");
-            // });
+            // deviant only at this step
+
 
             it("Voter cannot add voter", async() => {
                 result = VotingInstance.addVoter(voterB, {from: voterA})
@@ -85,6 +107,8 @@ contract("Voting", accounts => {
                 result = VotingInstance.addVoter(voterB, {from: owner})
                 await expectRevert(result, "Already registered");
             });
+
+            // deviant for other steps
 
             it("Owner get Proposal", async() => {
                 result = VotingInstance.getOneProposal(0, {from: owner})
@@ -109,6 +133,21 @@ contract("Voting", accounts => {
             it("Voter AddProposal", async() => {
                 result = VotingInstance.addProposal("Proposition 1", {from: voterA})
                 await expectRevert(result, "Proposals are not allowed yet");
+            });
+
+            it("Owner vote for proposition 0", async() => {
+                result = VotingInstance.setVote(0, {from: owner})
+                await expectRevert(result, "You're not a voter.")
+            });
+
+            it("Other vote for proposition 0", async() => {
+                result = VotingInstance.setVote(0, {from: other})
+                await expectRevert(result, "You're not a voter.")
+            });
+
+            it("Voter vote for proposition 0", async() => {
+                result = VotingInstance.setVote(0, {from: voterA})
+                await expectRevert(result, "Voting session havent started yet.")
             });
 
             it("Owner launch endProposalsRegistering", async() => {
@@ -194,6 +233,7 @@ contract("Voting", accounts => {
         })
 
         context ("Check next level passing", () => {
+
             it("from RegisteringVoters to ProposalsRegistrationStarted", async() => {
                 await VotingInstance.startProposalsRegistering({from: owner})
                 result = await VotingInstance.workflowStatus();
